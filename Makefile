@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -g
 
-SRCS = main.c scheduler.c scenario.c queue.c io.c
+SRCS = main.c scheduler.c scenario.c queue.c io.c scheduler_utils.c
 OBJS = $(SRCS:.c=.o)
 
 TARGET = scheduler

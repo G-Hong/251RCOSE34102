@@ -13,10 +13,18 @@ typedef struct{
     int io_burst_time;
 }Process;
 
+typedef struct {
+    int pid;
+    int start_time;
+    int end_time;
+} GanttEntry;
+
+#define MAX_LOG 1000
+
 //외부 파일에서 정의된 전역변수를 이 파일에서도 사용할 수 있게 선언
+extern GanttEntry gantt_log[MAX_LOG];
+extern int gantt_log_index;
 extern Process scenario_processes[];
 extern const int NUM_PROCESSES;
 
 #endif
-
-
