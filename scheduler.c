@@ -1,4 +1,4 @@
-//알고리즘 구현(FCFS)
+//스케쥴링 알고리즘 구현 및 time 연산
 #include <stdio.h>
 #include "scheduler.h"
 

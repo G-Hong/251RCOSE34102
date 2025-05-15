@@ -1,4 +1,4 @@
-//Process 구조
+//Process 구조 및 데이터 정의
 #ifndef PROCESS_H
 #define PROCESS_H
 

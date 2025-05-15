@@ -3,13 +3,20 @@
 
 #include "process.h"
 
-//TODO
-//I/O 대기 큐 및 RR용 Ready Queue로 활용할 구조체 예정
-//typedef struct Queue{....}Queue;
+typedef struct Node {
+    Process data;
+    struct Node* next;
+} Node;
 
-//함수선언예정
-//void enqueue(Queue *q, Process p);
-//Process dequeue(Queue *q);
-//int is_empty(Queue *q);
+typedef struct {
+    Node* front;
+    Node* rear;
+} Queue;
+
+void init_queue(Queue* q);
+int is_empty(Queue* q);
+void enqueue(Queue* q, Process p);
+Process dequeue(Queue* q);
+void free_queue(Queue* q); // 메모리 해제용 (추가)
 
 #endif

@@ -1,4 +1,4 @@
-//알고리즘 함수 선언
+//스케쥴러 관련 함수 선언
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
