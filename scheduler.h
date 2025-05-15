@@ -10,6 +10,9 @@ void run_priority(Process processes[], int n);
 void run_priority_preemptive(Process processes[], int n);
 void run_round_robin(Process processes[], int n);
 
+void sort_by_arrival_time(Process processes[], int n); // 추가
+void calculate_times(Process processes[], int n);      // 추가
+
 void print_gantt_chart(Process processes[], int n);
 void print_result_table(Process processes[], int n);
 
