@@ -6,8 +6,10 @@
 
 int main(){
 
-    print_title("Round Robin");
-    run_round_robin(scenario_processes, NUM_PROCESSES);
+    reset_gantt_log();
+
+    print_title("Priority Scheduling");
+    run_priority(scenario_processes, NUM_PROCESSES);
     print_gantt_chart(scenario_processes, NUM_PROCESSES);
     print_result_table(scenario_processes, NUM_PROCESSES);
 

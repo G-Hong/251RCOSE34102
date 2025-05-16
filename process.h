@@ -2,16 +2,18 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
-typedef struct{
+typedef struct {
     int pid;
     char name[16];
     int arrival_time;
     int burst_time;
+    int priority;
     int waiting_time;
     int turnaround_time;
     int io_request_time;
     int io_burst_time;
-}Process;
+} Process;
+
 
 typedef struct {
     int pid;

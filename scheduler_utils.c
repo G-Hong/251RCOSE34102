@@ -36,12 +36,14 @@ void execute_preemptive_step(
     remaining_burst[idx] -= exec_time;
 
     if (remaining_burst[idx] > 0) {
-        enqueue(ready_q, processes[idx]);
+        if (ready_q != NULL)  // 안전하게 체크
+            enqueue(ready_q, processes[idx]);
     } else {
         processes[idx].turnaround_time = *current_time - processes[idx].arrival_time;
         (*completed)++;
     }
 }
+
 
 void calculate_times(Process processes[], int n) {
     int current_time = 0;
@@ -76,27 +78,44 @@ void log_gantt_entry(int pid, int start_time, int end_time) {
 
 void print_gantt_chart(Process processes[], int n) {
     printf("Gantt Chart:\n|");
-    for (int i = 0; i < gantt_log_index; i++) {
-        int pid = gantt_log[i].pid;
-        printf("  %s  |", processes[pid - 1].name);
+
+    // 1. 이름 출력
+    for (int i = 0; i < gantt_log_index;) {
+        int j = i + 1;
+        while (j < gantt_log_index && gantt_log[j].pid == gantt_log[i].pid)
+            j++;
+
+        printf("  %s  |", processes[gantt_log[i].pid - 1].name);
+        i = j;
     }
     printf("\n");
 
-    for (int i = 0; i < gantt_log_index; i++) {
-        printf("%-7d", gantt_log[i].start_time);
+    // 2. 시간 출력
+    int time = gantt_log[0].start_time;
+    printf("%-6d", time);
+    for (int i = 0; i < gantt_log_index;) {
+        int j = i + 1;
+        while (j < gantt_log_index && gantt_log[j].pid == gantt_log[i].pid)
+            j++;
+
+        time = gantt_log[j - 1].end_time;
+        printf("%-7d", time);
+        i = j;
     }
-    printf("%d\n\n", gantt_log[gantt_log_index - 1].end_time);
+    printf("\n\n");
 }
+
 void print_result_table(Process processes[], int n) {
-    printf("PID\tName\tArrival\tBurst\tWaiting\tTurnaround\n");
+    printf("PID     Name    Arrival Burst   Priority  Waiting Turnaround\n");
     for (int i = 0; i < n; i++) {
-        printf("%d\t%s\t%d\t%d\t%d\t%d\n",
-               processes[i].pid,
-               processes[i].name,
-               processes[i].arrival_time,
-               processes[i].burst_time,
-               processes[i].waiting_time,
-               processes[i].turnaround_time);
+        printf("%-7d %-7s %-7d %-7d %-9d %-9d %-10d\n",
+            processes[i].pid,
+            processes[i].name,
+            processes[i].arrival_time,
+            processes[i].burst_time,
+            processes[i].priority,
+            processes[i].waiting_time,
+            processes[i].turnaround_time);
     }
 
     float total_waiting = 0, total_turnaround = 0;
@@ -108,3 +127,18 @@ void print_result_table(Process processes[], int n) {
     printf("\nAverage Waiting Time: %.2f\n", total_waiting / n);
     printf("Average Turnaround Time: %.2f\n", total_turnaround / n);
 }
+
+// 간트차트 초단위로 볼 때 -> 테스트용
+// void print_gantt_chart(Process processes[], int n) {
+//     printf("Gantt Chart:\n|");
+//     for (int i = 0; i < gantt_log_index; i++) {
+//         int pid = gantt_log[i].pid;
+//         printf("  %s  |", processes[pid - 1].name);
+//     }
+//     printf("\n");
+
+//     for (int i = 0; i < gantt_log_index; i++) {
+//         printf("%-7d", gantt_log[i].start_time);
+//     }
+//     printf("%d\n\n", gantt_log[gantt_log_index - 1].end_time);
+// }

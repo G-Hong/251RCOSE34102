@@ -65,3 +65,73 @@ void run_round_robin(Process processes[], int n) {
     free_queue(&ready_q);
 }
 
+void run_sjf_preemptive(Process processes[], int n) {
+    sort_by_arrival_time(processes, n);
+
+    int remaining_burst[n];
+    for (int i = 0; i < n; i++)
+        remaining_burst[i] = processes[i].burst_time;
+
+    int completed = 0;
+    int current_time = 0;
+
+    while (completed < n) {
+        // 도착한 모든 프로세스 중 실행 가능한 것 중에 남은 시간이 가장 짧은 것을 선택
+        int min_idx = -1;
+        int min_remaining = 1e9;
+
+        for (int i = 0; i < n; i++) {
+            if (processes[i].arrival_time <= current_time && remaining_burst[i] > 0) {
+                if (remaining_burst[i] < min_remaining) {
+                    min_remaining = remaining_burst[i];
+                    min_idx = i;
+                }
+            }
+        }
+
+        if (min_idx == -1) {
+            // 실행 가능한 프로세스가 없으면 시간만 흐름
+            current_time++;
+            continue;
+        }
+
+        // 선점형 실행 처리 (한 번에 1 단위씩만 실행)
+        execute_preemptive_step(processes, min_idx, 1, remaining_burst, &current_time, NULL, &completed);
+    }
+}
+
+void run_priority(Process processes[], int n) {
+    sort_by_arrival_time(processes, n);
+
+    int current_time = 0;
+    int completed = 0;
+    int is_completed[n];
+    for (int i = 0; i < n; i++) is_completed[i] = 0;
+
+    while (completed < n) {
+        int idx = -1;
+        int highest_priority = 1e9;
+
+        for (int i = 0; i < n; i++) {
+            if (processes[i].arrival_time <= current_time && !is_completed[i]) {
+                if (processes[i].priority < highest_priority) {
+                    highest_priority = processes[i].priority;
+                    idx = i;
+                }
+            }
+        }
+
+        if (idx == -1) {
+            current_time++;
+            continue;
+        }
+
+        processes[idx].waiting_time = current_time - processes[idx].arrival_time;
+        log_gantt_entry(processes[idx].pid, current_time, current_time + processes[idx].burst_time);
+
+        current_time += processes[idx].burst_time;
+        processes[idx].turnaround_time = current_time - processes[idx].arrival_time;
+        is_completed[idx] = 1;
+        completed++;
+    }
+}
