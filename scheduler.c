@@ -135,3 +135,38 @@ void run_priority(Process processes[], int n) {
         completed++;
     }
 }
+
+void run_priority_preemptive(Process processes[], int n) {
+    sort_by_arrival_time(processes, n);
+
+    int remaining_burst[n];
+    for (int i = 0; i < n; i++)
+        remaining_burst[i] = processes[i].burst_time;
+
+    int completed = 0;
+    int current_time = 0;
+
+    while (completed < n) {
+        int idx = -1;
+        int highest_priority = 1e9;
+
+        // 현재 시간에 도달한 프로세스 중에서 우선순위 가장 높은 것 선택
+        for (int i = 0; i < n; i++) {
+            if (processes[i].arrival_time <= current_time && remaining_burst[i] > 0) {
+                if (processes[i].priority < highest_priority) {
+                    highest_priority = processes[i].priority;
+                    idx = i;
+                }
+            }
+        }
+
+        if (idx == -1) {
+            current_time++;
+            continue;
+        }
+
+        // 1ms 단위 실행
+        execute_preemptive_step(processes, idx, 1, remaining_burst, &current_time, NULL, &completed);
+    }
+}
+

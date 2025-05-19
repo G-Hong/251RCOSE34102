@@ -7,11 +7,11 @@
 int main(){
 
     reset_gantt_log();
-
-    print_title("Priority Scheduling");
-    run_priority(scenario_processes, NUM_PROCESSES);
+    
+    print_title("Priority Preemptive Scheduling");
+    run_priority_preemptive(scenario_processes, NUM_PROCESSES);
     print_gantt_chart(scenario_processes, NUM_PROCESSES);
     print_result_table(scenario_processes, NUM_PROCESSES);
-
+    
     return 0;
 }
