@@ -10,13 +10,11 @@ typedef struct {
     int priority;
     int waiting_time;
     int turnaround_time;
-    int io_request_time;    // CPU 내에서 이 시간만큼 실행되면 I/O 발생
-    int io_burst_time;  // I/O 디바이스에 머무는 시간
 
     // I/O 처리용
     int executed_time;       // 지금까지 CPU에서 실행된 시간
-    int io_remaining_time;   // I/O 남은 시간
-    int is_in_io;            // I/O 중인지 표시 (1이면 I/O 중)    
+    int io_remaining_time;   // I/O 잔여시간
+    int is_in_io;            // I/O 중인지 표시 (1이면 I/O 실행중)    
 } Process;
 
 

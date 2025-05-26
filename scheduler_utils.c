@@ -105,15 +105,38 @@ void print_gantt_chart(Process processes[], int n) {
     printf("\n\n");
 }
 
+#include "io_event.h"  // io_events[]와 NUM_IO_EVENTS 사용을 위해 필요
+
+char* int_to_str(int value) {
+    static char buffer[16];
+    sprintf(buffer, "%d", value);
+    return buffer;
+}
+
 void print_result_table(Process processes[], int n) {
-    printf("PID     Name    Arrival Burst   Priority  Waiting Turnaround\n");
+    printf("PID  Name     Arr  Burst  Prio  IO_Req IO_Dur Wait  Turn\n");
+
     for (int i = 0; i < n; i++) {
-        printf("%-7d %-7s %-7d %-7d %-9d %-9d %-10d\n",
+        int io_req = -1; // 기본값: 없음
+        int io_dur = -1;
+
+        // 외부 이벤트 배열에서 현재 PID에 대한 IO 이벤트 찾기 (최초 1개만 출력)
+        for (int j = 0; j < NUM_IO_EVENTS; j++) {
+            if (io_events[j].pid == processes[i].pid) {
+                io_req = io_events[j].trigger_time;
+                io_dur = io_events[j].burst_time;
+                break; // 첫 번째 이벤트만 사용
+            }
+        }
+
+        printf("%-4d %-8s %-5d %-6d %-6d %-7s %-7s %-6d %-6d\n",
             processes[i].pid,
             processes[i].name,
             processes[i].arrival_time,
             processes[i].burst_time,
             processes[i].priority,
+            (io_req == -1 ? "-" : int_to_str(io_req)),   // 없으면 "-"
+            (io_dur == -1 ? "-" : int_to_str(io_dur)),
             processes[i].waiting_time,
             processes[i].turnaround_time);
     }
@@ -127,6 +150,32 @@ void print_result_table(Process processes[], int n) {
     printf("\nAverage Waiting Time: %.2f\n", total_waiting / n);
     printf("Average Turnaround Time: %.2f\n", total_turnaround / n);
 }
+
+
+// void print_result_table(Process processes[], int n) {
+//     printf("PID     Name    Arrival Burst   Priority  Waiting Turnaround\n");
+    
+//     for (int i = 0; i < n; i++) {
+//         printf("%-7d %-7s %-7d %-7d %-9d %-9d %-10d\n",
+//             processes[i].pid,
+//             processes[i].name,
+//             processes[i].arrival_time,
+//             processes[i].burst_time,
+//             processes[i].priority,
+//             processes[i].waiting_time,
+//             processes[i].turnaround_time);
+//     }
+
+//     float total_waiting = 0, total_turnaround = 0;
+//     for (int i = 0; i < n; i++) {
+//         total_waiting += processes[i].waiting_time;
+//         total_turnaround += processes[i].turnaround_time;
+//     }
+
+//     printf("\nAverage Waiting Time: %.2f\n", total_waiting / n);
+//     printf("Average Turnaround Time: %.2f\n", total_turnaround / n);
+// }
+
 
 // 간트차트 초단위로 볼 때 -> 테스트용
 // void print_gantt_chart(Process processes[], int n) {

@@ -47,6 +47,7 @@ void run_fcfs_with_io(Process processes[], int n) {
 
         current_time++;
     }
+    calculate_times(processes, n);
 
     print_gantt_chart(processes, n);
     print_result_table(processes, n);
