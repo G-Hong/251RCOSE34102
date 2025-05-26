@@ -17,6 +17,7 @@ void init_queue(Queue* q);
 int is_empty(Queue* q);
 void enqueue(Queue* q, Process p);
 Process dequeue(Queue* q);
+Process* dequeue_pointer(Queue* q);
 void free_queue(Queue* q); // 메모리 해제용 (추가)
 
 #endif

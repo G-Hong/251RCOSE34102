@@ -1,7 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -g
 
-SRCS = main.c scheduler.c scenario.c queue.c io.c scheduler_utils.c
+# 소스 파일 목록
+SRCS = main.c scheduler.c scheduler_utils.c scenario.c queue.c io.c io_event.c
 OBJS = $(SRCS:.c=.o)
 
 TARGET = scheduler
@@ -10,9 +11,10 @@ TARGET = scheduler
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
 
-# .c -> .o 규칙
+# .c -> .o 개별 빌드 규칙
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# clean 명령
 clean:
 	rm -f $(TARGET) *.o

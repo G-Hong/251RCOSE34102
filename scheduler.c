@@ -1,10 +1,60 @@
 //스케쥴링 알고리즘 구현 및 time 연산
 #include <stdio.h>
+#include "process.h"
 #include "scheduler.h"
 #include "queue.h"
+#include "io_event.h" 
 #include "scheduler_utils.h"
 
+void run_fcfs_with_io(Process processes[], int n) {
+    reset_gantt_log();
+
+    Queue ready_q, io_q;
+    init_queue(&ready_q);
+    init_queue(&io_q);
+
+    int current_time = 0;
+    int completed = 0;
+    Process *running = NULL;
+
+    // 정렬: 도착 시간 순으로
+    sort_by_arrival_time(processes, n);
+
+    // 초기 enqueue
+    for (int i = 0; i < n; i++) {
+        enqueue(&ready_q, processes[i]);
+    }
+
+    printf("=== FCFS Scheduling with I/O Simulation ===\n\n");
+
+    while (completed < n) {
+        process_io_events(&running, current_time, &io_q, &ready_q);
+
+        if (!running && !is_empty(&ready_q)) {
+            running = dequeue_pointer(&ready_q);
+        }
+
+        if (running) {
+            log_gantt_entry(running->pid, current_time, current_time + 1);
+            running->executed_time++;
+
+            if (running->executed_time >= running->burst_time) {
+                running->turnaround_time = current_time + 1 - running->arrival_time;
+                completed++;
+                running = NULL;
+            }
+        }
+
+        current_time++;
+    }
+
+    print_gantt_chart(processes, n);
+    print_result_table(processes, n);
+}
+
 void run_fcfs(Process processes[], int n) {
+    reset_gantt_log();
+
     sort_by_arrival_time(processes, n);
     int current_time = 0;
 
@@ -20,9 +70,13 @@ void run_fcfs(Process processes[], int n) {
         current_time += processes[i].burst_time;
         processes[i].turnaround_time = current_time - processes[i].arrival_time;
     }
+    print_gantt_chart(processes, n);
+    print_result_table(processes, n); 
 }
 
 void run_round_robin(Process processes[], int n) {
+    reset_gantt_log();
+
     sort_by_arrival_time(processes, n);
 
     Queue ready_q;
@@ -63,9 +117,13 @@ void run_round_robin(Process processes[], int n) {
     }
 
     free_queue(&ready_q);
+    print_gantt_chart(processes, n);
+    print_result_table(processes, n);
 }
 
 void run_sjf_preemptive(Process processes[], int n) {
+    reset_gantt_log();
+
     sort_by_arrival_time(processes, n);
 
     int remaining_burst[n];
@@ -98,9 +156,13 @@ void run_sjf_preemptive(Process processes[], int n) {
         // 선점형 실행 처리 (한 번에 1 단위씩만 실행)
         execute_preemptive_step(processes, min_idx, 1, remaining_burst, &current_time, NULL, &completed);
     }
+    print_gantt_chart(processes, n);
+    print_result_table(processes, n);
 }
 
 void run_priority(Process processes[], int n) {
+    reset_gantt_log();
+
     sort_by_arrival_time(processes, n);
 
     int current_time = 0;
@@ -134,9 +196,13 @@ void run_priority(Process processes[], int n) {
         is_completed[idx] = 1;
         completed++;
     }
+    print_gantt_chart(processes, n);
+    print_result_table(processes, n);
 }
 
 void run_priority_preemptive(Process processes[], int n) {
+    reset_gantt_log();
+
     sort_by_arrival_time(processes, n);
 
     int remaining_burst[n];
@@ -168,5 +234,7 @@ void run_priority_preemptive(Process processes[], int n) {
         // 1ms 단위 실행
         execute_preemptive_step(processes, idx, 1, remaining_burst, &current_time, NULL, &completed);
     }
+    print_gantt_chart(processes, n);
+    print_result_table(processes, n);
 }
 

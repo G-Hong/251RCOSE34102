@@ -46,3 +46,14 @@ void free_queue(Queue* q) {
         dequeue(q);
     }
 }
+
+Process* dequeue_pointer(Queue* q) {
+    if (q->front == NULL) return NULL;
+
+    Node* temp = q->front;
+    Process* result = &temp->data;
+    q->front = temp->next;
+    if (q->front == NULL) q->rear = NULL;
+    free(temp);
+    return result;
+}
