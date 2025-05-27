@@ -9,7 +9,7 @@
 
 int main(){
     reset_gantt_log();
-    run_round_robin_with_io(scenario_processes, NUM_PROCESSES, scenario_io_events, NUM_IO_EVENTS);
+    run_round_robin_with_io(scenario_processes, NUM_PROCESSES, scenario_io_events1, NUM_IO_EVENTS1);
     print_gantt_chart(scenario_processes, NUM_PROCESSES);
     print_result_table(scenario_processes, NUM_PROCESSES);
     print_io_log();
