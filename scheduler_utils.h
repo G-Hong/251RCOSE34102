@@ -4,10 +4,11 @@
 #include "io_event_data.h"
 #include "process.h"
 #include "queue.h"
+#include <stdbool.h> //삭제?
 
 void sort_by_arrival_time(Process processes[], int num_processes);
-void check_new_arrivals(Process processes[], int num_processes, int current_time, int arrived[], Queue* q);
-
+//void check_new_arrivals(Process processes[], int num_processes, int current_time, int arrived[], Queue* q);
+void check_new_arrivals(Process processes[], int num_processes, int current_time, bool arrived[], Queue* q);
 void execute_preemptive_step(
     Process processes[],
     int idx,

@@ -2,9 +2,20 @@
 #include <stdio.h>
 #include <string.h>
 #include "io_log.h"
+#include "process.h"
 
 IOLogEntry io_log[MAX_IO_LOG];
 int io_log_index = 0;
+
+void reset_io_log() {
+    io_log_index = 0;
+}
+
+void clear_io_reqs(Process processes[], int n) {
+    for (int i = 0; i < n; i++) {
+        processes[i].io_reqs_str[0] = '\0';
+    }
+}
 
 void log_io_event(int time, int pid, const char* action, int trigger_time, int duration) {
     if (io_log_index >= MAX_IO_LOG) return;

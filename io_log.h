@@ -1,4 +1,6 @@
 // io_log.h
+#include "process.h"
+
 #ifndef IO_LOG_H
 #define IO_LOG_H
 
@@ -17,6 +19,9 @@ void log_io_event(int time, int pid, const char* action, int trigger_time, int d
 
 // 로그 출력
 void print_io_log();
+void reset_io_log();
+void clear_io_reqs(Process processes[], int n);
+
 
 extern IOLogEntry io_log[];
 extern int io_log_index;

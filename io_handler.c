@@ -9,7 +9,7 @@ void handle_io_request(Process **running, int current_time, Queue *io_q, IOEvent
     if (*running == NULL) return;
 
     for (int i = 0; i < n; i++) {
-        IOEvent *e = &io_events[i];  // ✅ 구조체 주소 참조 (포인터)
+        IOEvent *e = &io_events[i];
 
         if (e->pid == (*running)->pid &&
             (*running)->executed_time == e->trigger_time &&
@@ -17,7 +17,7 @@ void handle_io_request(Process **running, int current_time, Queue *io_q, IOEvent
         {
             (*running)->io_complete_time = current_time + e->duration;
             log_io_event(current_time, (*running)->pid, "IO Start", e->trigger_time, e->duration);
-            e->handled = 1;  // ✅ 원본을 수정!
+            e->handled = 1;
             enqueue(io_q, **running);
             *running = NULL;
             return;

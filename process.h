@@ -1,6 +1,7 @@
 //Process 구조 및 데이터 정의
 #ifndef PROCESS_H
 #define PROCESS_H
+#define MAX_IO_REQ_STR_LEN 256
 
 typedef struct {
     int pid;
@@ -18,6 +19,8 @@ typedef struct {
 
     int start_time;
     int end_time;
+
+    char io_reqs_str[MAX_IO_REQ_STR_LEN];  // 🔹추가!
 } Process;
 
 
@@ -34,5 +37,9 @@ extern GanttEntry gantt_log[MAX_LOG];
 extern int gantt_log_index;
 extern Process scenario_processes[];
 extern const int NUM_PROCESSES;
+extern Process random_scenario_processes[];
+extern const int RANDOM_NUM_PROCESSES;
+
+void generate_processes(Process processes[], int n);
 
 #endif

@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>  // bool을 쓰기 위해 반드시 필요
 #include "scheduler_utils.h"
 #include "io_log.h"
 #include "io_event_data.h"
 #include "io_handler.h"
+#define MAX_PROCESS 100
+
 
 void sort_by_arrival_time(Process processes[], int num_processes) {
     for (int i = 0; i < num_processes - 1; i++) {
@@ -17,19 +20,13 @@ void sort_by_arrival_time(Process processes[], int num_processes) {
     }
 }
 
-void check_new_arrivals(Process processes[], int num_processes, int current_time, int arrived[], Queue* q) {
+void check_new_arrivals(Process processes[], int num_processes, int current_time, bool arrived[], Queue* q) {
     for (int i = 0; i < num_processes; i++) {
         if (processes[i].arrival_time <= current_time && !arrived[i]) {
-            printf("DEBUG: check_new_arrivals - PID=%d name=%s\n",
-                processes[i].pid, processes[i].name);
             enqueue(q, processes[i]);
-            printf("체크2");
-            arrived[i] = 1;
-            printf("체크3");
+            arrived[i] = true;
         }
-        printf("체크4");
     }
-    printf("체크5");
 }
 
 
@@ -88,16 +85,24 @@ void execute_preemptive_step(
     }
 }
 
+void calculate_times(Process processes[], int num_processes) {
+    int last_end_times[MAX_PROCESS] = {0};
+    int executed_time[MAX_PROCESS] = {0};
 
-void calculate_times(Process processes[], int num_processes) {  // 비선점형 전용 시간계산 함수
-    int current_time = 0;
+    for (int i = 0; i < gantt_log_index; i++) {
+        int pid = gantt_log[i].pid;
+        int duration = gantt_log[i].end_time - gantt_log[i].start_time;
+
+        if (gantt_log[i].end_time > last_end_times[pid])
+            last_end_times[pid] = gantt_log[i].end_time;
+
+        executed_time[pid] += duration;
+    }
+
     for (int i = 0; i < num_processes; i++) {
-        if (current_time < processes[i].arrival_time)
-            current_time = processes[i].arrival_time;
-
-        processes[i].waiting_time = current_time - processes[i].arrival_time;
-        current_time += processes[i].burst_time;
-        processes[i].turnaround_time = processes[i].waiting_time + processes[i].burst_time;
+        int pid = processes[i].pid;
+        processes[i].turnaround_time = last_end_times[pid] - processes[i].arrival_time;
+        processes[i].waiting_time = processes[i].turnaround_time - executed_time[pid];
     }
 }
 

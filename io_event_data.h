@@ -13,5 +13,9 @@ typedef struct {
 
 extern IOEvent scenario_io_events[];
 extern const int NUM_IO_EVENTS;
+extern IOEvent random_scenario_io_events[];
+extern int RANDOM_NUM_IO_EVENTS;
+
+void generate_io_events(const Process processes[], int num_processes, IOEvent io_events[], int *io_event_count);
 
 #endif
