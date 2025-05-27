@@ -11,7 +11,7 @@ typedef struct {
     int handled;
 } IOEvent;
 
-extern IOEvent scenario_io_events1[];
-extern const int NUM_IO_EVENTS1;
+extern IOEvent scenario_io_events[];
+extern const int NUM_IO_EVENTS;
 
 #endif

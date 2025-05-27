@@ -5,6 +5,7 @@
 void init_queue(Queue* q) {
     q->front = NULL;
     q->rear = NULL;
+    q->size = 0;
 }
 
 int is_empty(Queue* q) {
@@ -12,8 +13,23 @@ int is_empty(Queue* q) {
 }
 
 void enqueue(Queue* q, Process p) {
-    printf("DEBUG: enqueue() - PID=%d\n", p.pid); // 확인용
+    if (q == NULL) {
+        fprintf(stderr, "FATAL: enqueue called with NULL queue pointer\n");
+        exit(1);
+    }
+
+    printf("DEBUG: enqueue() - PID=%d\n", p.pid);
+
     Node* new_node = (Node*)malloc(sizeof(Node));
+    if (new_node == NULL) {
+        fprintf(stderr, "FATAL: malloc failed in enqueue\n");
+        exit(1);
+    }
+
+    // 디버깅용 필드 출력
+    printf("       name=%s, arrival=%d, burst=%d, priority=%d\n",
+        p.name, p.arrival_time, p.burst_time, p.priority);
+
     new_node->data = p;
     new_node->next = NULL;
 
@@ -23,7 +39,25 @@ void enqueue(Queue* q, Process p) {
         q->rear->next = new_node;
         q->rear = new_node;
     }
+
+    q->size++;
 }
+
+
+// void enqueue(Queue* q, Process p) {
+//     printf("DEBUG: enqueue() - PID=%d\n", p.pid); // 확인용
+//     Node* new_node = (Node*)malloc(sizeof(Node));
+//     new_node->data = p;
+//     new_node->next = NULL;
+
+//     if (q->rear == NULL) {
+//         q->front = q->rear = new_node;
+//     } else {
+//         q->rear->next = new_node;
+//         q->rear = new_node;
+//     }
+//     q->size++;
+// }
 
 Process dequeue(Queue* q) {
     if (is_empty(q)) {

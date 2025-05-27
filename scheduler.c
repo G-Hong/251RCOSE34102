@@ -136,6 +136,70 @@ void run_round_robin_with_io(Process processes[], int num_processes, IOEvent io_
     }
 }
 
+void run_sjf_preemptive_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {
+    print_title("SJF Preemptive with I/O");
+
+    int current_time = 0;
+    int completed = 0;
+
+    int remaining_burst[n];
+    int arrived[n];
+    for (int i = 0; i < n; i++) {
+        remaining_burst[i] = processes[i].burst_time;
+        arrived[i] = 0;
+        processes[i].executed_time = 0;
+    }
+
+    Queue ready_q, io_q;
+    init_queue(&ready_q);
+    init_queue(&io_q);
+
+    // 초기 도착 프로세스 삽입
+    check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+
+    while (completed < n) {
+        // I/O 완료 확인
+        process_io_events(NULL, current_time, &io_q, &ready_q, io_events, num_io_events);
+
+        if (is_empty(&ready_q)) {
+            current_time++;
+            check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+            continue;
+        }
+
+        // Ready Queue에서 남은 burst time이 가장 짧은 프로세스 선택
+        int min_idx = -1;
+        int min_remaining = 1e9;
+        int size = queue_size(&ready_q);
+        for (int i = 0; i < size; i++) {
+            Process p = dequeue(&ready_q);
+            int idx = p.pid - 1;
+
+            if (remaining_burst[idx] < min_remaining) {
+                min_remaining = remaining_burst[idx];
+                min_idx = idx;
+            }
+
+            enqueue(&ready_q, p); // 다시 넣기
+        }
+
+        if (min_idx != -1) {
+            execute_preemptive_step_with_io(
+                processes, min_idx, 1,
+                remaining_burst, &current_time,
+                &ready_q, &io_q,
+                &completed, io_events, num_io_events
+            );
+        }
+
+        check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+    }
+
+    free_queue(&ready_q);
+    free_queue(&io_q);
+}
+
+
 
 // void run_fcfs(Process processes[], int n) {
 

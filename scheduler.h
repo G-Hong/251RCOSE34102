@@ -12,6 +12,6 @@
 // void run_round_robin(Process processes[], int num_processes);
 void run_fcfs_with_io(Process processes[], int num_processes, IOEvent io_events[], int num_io_events);
 void run_round_robin_with_io(Process processes[], int num_processes, IOEvent io_events[], int num_io_events);
-
+void run_sjf_preemptive_with_io(Process processes[], int num_processes, IOEvent io_events[], int num_io_events);
 
 #endif
