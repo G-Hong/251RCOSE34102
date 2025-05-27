@@ -12,6 +12,7 @@ int is_empty(Queue* q) {
 }
 
 void enqueue(Queue* q, Process p) {
+    printf("DEBUG: enqueue() - PID=%d\n", p.pid); // 확인용
     Node* new_node = (Node*)malloc(sizeof(Node));
     new_node->data = p;
     new_node->next = NULL;
@@ -47,13 +48,12 @@ void free_queue(Queue* q) {
     }
 }
 
-Process* dequeue_pointer(Queue* q) {
-    if (q->front == NULL) return NULL;
-
-    Node* temp = q->front;
-    Process* result = &temp->data;
-    q->front = temp->next;
-    if (q->front == NULL) q->rear = NULL;
-    free(temp);
-    return result;
+int queue_size(Queue* q) {
+    int count = 0;
+    Node* cur = q->front;
+    while (cur != NULL) {
+        count++;
+        cur = cur->next;
+    }
+    return count;
 }

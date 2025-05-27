@@ -6,21 +6,20 @@
 #include "io_event_data.h" 
 #include "scheduler_utils.h"
 #include "io_handler.h"
+#include "io_log.h"
 
 void run_fcfs_with_io(Process processes[], int n) {
-
     Queue ready_q, io_q;
     init_queue(&ready_q);
     init_queue(&io_q);
 
     int current_time = 0;
     int completed = 0;
-    Process *running = NULL;
+    int running_flag = 0;
+    Process running;
 
-    // 정렬: 도착 시간 순으로
     sort_by_arrival_time(processes, n);
 
-    // 초기 enqueue
     for (int i = 0; i < n; i++) {
         enqueue(&ready_q, processes[i]);
     }
@@ -28,27 +27,64 @@ void run_fcfs_with_io(Process processes[], int n) {
     printf("=== FCFS Scheduling with I/O Simulation ===\n\n");
 
     while (completed < n) {
-        process_io_events(&running, current_time, &io_q, &ready_q);
-
-        if (!running && !is_empty(&ready_q)) {
-            running = dequeue_pointer(&ready_q);
-        }
-
-        if (running) {
-            log_gantt_entry(running->pid, current_time, current_time + 1);
-            running->executed_time++;
-
-            if (running->executed_time >= running->burst_time) {
-                running->turnaround_time = current_time + 1 - running->arrival_time;
-                completed++;
-                running = NULL;
+        // I/O 복귀 체크
+        int q_len = queue_size(&io_q);  // 또는 io_q.size (단, enqueue/dequeue에서 관리한다면)
+        for (int i = 0; i < q_len; i++) {
+            Process io_proc = dequeue(&io_q);
+            if (io_proc.io_complete_time <= current_time) {
+                log_io_event(current_time, io_proc.pid, "IO Done", -1, -1);
+                enqueue(&ready_q, io_proc);
+            } else {
+                enqueue(&io_q, io_proc); // 아직 I/O 진행 중
             }
         }
 
-        current_time++;
-    }
-    calculate_times(processes, n);
+        if (!running_flag && !is_empty(&ready_q)) {
+            running = dequeue(&ready_q);
+            running_flag = 1;
+            printf("DEBUG: [DISPATCH] pid=%d assigned to CPU\n", running.pid);
+            if (running.executed_time == 0)
+                running.start_time = current_time;
+        }
 
+        // CPU 할당
+        if (running_flag) {
+            log_gantt_entry(running.pid, current_time, current_time + 1);
+            running.executed_time++;
+        
+            // I/O 발생 조건 확인
+            int io_triggered = 0;
+            for (int i = 0; i < NUM_IO_EVENTS; i++) {
+                if (io_events[i].pid == running.pid && running.executed_time == io_events[i].trigger_time && running.io_complete_time == 0) {
+                    running.io_complete_time = current_time + io_events[i].duration;
+                    printf("DEBUG: [I/O START] pid=%d at time=%d, duration=%d\n",
+                        running.pid, current_time, io_events[i].duration);
+                    log_io_event(current_time, running.pid, "IO Start", io_events[i].trigger_time, io_events[i].duration);
+                    enqueue(&io_q, running);
+                    running_flag = 0;
+                    io_triggered = 1;
+                    break;
+                }
+            }
+        
+            // 종료 조건은 I/O 발생 안 했을 때만 체크
+            if (!io_triggered && running.executed_time >= running.burst_time) {
+                running.end_time = current_time + 1;
+                running.turnaround_time = running.end_time - running.arrival_time;
+                completed++;
+                running_flag = 0;
+                printf("DEBUG: [COMPLETE] pid=%d at time=%d\n", running.pid, current_time);
+            }
+        }
+        
+
+        current_time++;
+        printf("DEBUG: time=%d, completed=%d, ready=%d, running_flag=%d\n",
+            current_time, completed, !is_empty(&ready_q), running_flag);
+     
+    }
+
+    calculate_times(processes, n);
 }
 
 

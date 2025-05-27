@@ -6,7 +6,6 @@
 #include "queue.h"
 
 extern IOEvent io_events[];
-extern int NUM_IO_EVENTS;
 
 void handle_io_request(Process **running, int current_time, Queue *io_q) {
     if (*running == NULL) return;
@@ -17,7 +16,7 @@ void handle_io_request(Process **running, int current_time, Queue *io_q) {
         if (e.pid == (*running)->pid && (*running)->executed_time == e.trigger_time) {
             (*running)->io_complete_time = current_time + e.duration;
             log_io_event(current_time, (*running)->pid, "IO Start", e.trigger_time, e.duration);
-            enqueue(io_q, *running);
+            enqueue(io_q, **running);
             *running = NULL;  // CPU 비움
             break;
         }
@@ -25,17 +24,18 @@ void handle_io_request(Process **running, int current_time, Queue *io_q) {
 }
 
 void update_io_queue(int current_time, Queue *io_q, Queue *ready_q) {
-    int size = io_q->size;
+    int size = queue_size(io_q);
     for (int i = 0; i < size; i++) {
-        Process *p = dequeue_pointer(io_q);
-        if (current_time >= p->io_complete_time) {
-            log_io_event(current_time, p->pid, "IO Done", -1, -1);
+        Process p = dequeue(io_q);
+        if (current_time >= p.io_complete_time) {
+            log_io_event(current_time, p.pid, "IO Done", -1, -1);
             enqueue(ready_q, p);
         } else {
-            enqueue(io_q, p);  // 아직 완료 안 되었으면 다시 I/O 큐에 보관
+            enqueue(io_q, p);
         }
     }
 }
+
 
 void process_io_events(Process **running, int current_time, Queue *io_q, Queue *ready_q) {
     handle_io_request(running, current_time, io_q);

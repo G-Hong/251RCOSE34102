@@ -5,9 +5,9 @@
 #include "process.h"
 
 typedef struct {
-    int trigger_time;
     int pid;
-    int burst_time;
+    int trigger_time;
+    int duration;
 } IOEvent;
 
 extern IOEvent io_events[];

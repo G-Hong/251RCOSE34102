@@ -2,7 +2,8 @@
 #include "io_event_data.h"
 
 IOEvent io_events[] = {
-    {1, 1, 3},
+    {1, 2, 3},
+    {1, 2, 1},
     {4, 3, 2},
     {6, 4, 3}
 };
