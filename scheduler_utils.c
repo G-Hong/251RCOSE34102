@@ -3,10 +3,11 @@
 #include "scheduler_utils.h"
 #include "io_log.h"
 #include "io_event_data.h"
+#include "io_handler.h"
 
-void sort_by_arrival_time(Process processes[], int n) {
-    for (int i = 0; i < n - 1; i++) {
-        for (int j = i + 1; j < n; j++) {
+void sort_by_arrival_time(Process processes[], int num_processes) {
+    for (int i = 0; i < num_processes - 1; i++) {
+        for (int j = i + 1; j < num_processes; j++) {
             if (processes[i].arrival_time > processes[j].arrival_time) {
                 Process temp = processes[i];
                 processes[i] = processes[j];
@@ -16,14 +17,47 @@ void sort_by_arrival_time(Process processes[], int n) {
     }
 }
 
-void check_new_arrivals(Process processes[], int n, int current_time, int arrived[], Queue* q) {
-    for (int i = 0; i < n; i++) {
+void check_new_arrivals(Process processes[], int num_processes, int current_time, int arrived[], Queue* q) {
+    for (int i = 0; i < num_processes; i++) {
         if (processes[i].arrival_time <= current_time && !arrived[i]) {
             enqueue(q, processes[i]);
             arrived[i] = 1;
         }
     }
 }
+
+void execute_preemptive_step_with_io(
+    Process processes[], int idx, int exec_time,
+    int *remaining_burst, int *current_time,
+    Queue *ready_q, Queue *io_q,
+    int *completed, IOEvent *io_events, int n
+) {
+    for (int t = 0; t < exec_time; t++) {
+        log_gantt_entry(processes[idx].pid, *current_time, *current_time + 1);
+
+        processes[idx].executed_time++;
+
+        if (check_and_start_io(&processes[idx], *current_time, io_q, io_events, n)) {
+            (*current_time)++;  // I/O 발생한 이 시간까지는 진행됨
+            return;  // CPU 반환
+        }
+
+        (*current_time)++;
+        remaining_burst[idx]--;
+
+        if (remaining_burst[idx] == 0) {
+            processes[idx].turnaround_time = *current_time - processes[idx].arrival_time;
+            (*completed)++;
+            return;
+        }
+    }
+
+    // 완료되지 않았다면 ready 큐에 다시 삽입
+    if (ready_q != NULL) {
+        enqueue(ready_q, processes[idx]);
+    }
+}
+
 
 void execute_preemptive_step(
     Process processes[], int idx, int exec_time,
@@ -48,9 +82,9 @@ void execute_preemptive_step(
 }
 
 
-void calculate_times(Process processes[], int n) {
+void calculate_times(Process processes[], int num_processes) {
     int current_time = 0;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < num_processes; i++) {
         if (current_time < processes[i].arrival_time)
             current_time = processes[i].arrival_time;
 
@@ -79,7 +113,7 @@ void log_gantt_entry(int pid, int start_time, int end_time) {
     };
 }
 
-void print_gantt_chart(Process processes[], int n) {
+void print_gantt_chart(Process processes[], int num_processes) {
     printf("Gantt Chart:\n|");
 
     // 1. 이름 출력
@@ -126,10 +160,10 @@ char* get_io_events_str(int pid) {
     return (strlen(buffer) == 0) ? "-" : buffer;
 }
 
-void print_result_table(Process processes[], int n) {
+void print_result_table(Process processes[], int num_processes) {
     printf("PID  Name     Arr   Burst  Prio   Wait   Turn   IO_Reqs        \n");
 
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < num_processes; i++) {
         printf("%-4d %-8s %-5d %-6d %-6d %-6d %-6d %-14s\n",
             processes[i].pid,
             processes[i].name,
@@ -142,11 +176,11 @@ void print_result_table(Process processes[], int n) {
     }
 
     float total_waiting = 0, total_turnaround = 0;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < num_processes; i++) {
         total_waiting += processes[i].waiting_time;
         total_turnaround += processes[i].turnaround_time;
     }
 
-    printf("\nAverage Waiting Time: %.2f\n", total_waiting / n);
-    printf("Average Turnaround Time: %.2f\n", total_turnaround / n);
+    printf("\nAverage Waiting Time: %.2f\n", total_waiting / num_processes);
+    printf("Average Turnaround Time: %.2f\n", total_turnaround / num_processes);
 }

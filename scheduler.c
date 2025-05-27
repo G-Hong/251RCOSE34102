@@ -8,89 +8,133 @@
 #include "io_handler.h"
 #include "io_log.h"
 
-void run_fcfs_with_io(Process processes[], int n) {
+void run_fcfs_with_io(Process processes[], int num_processes, IOEvent io_events[], int num_io_events) {
     Queue ready_q, io_q;
     init_queue(&ready_q);
     init_queue(&io_q);
 
     int current_time = 0;
     int completed = 0;
-    int running_flag = 0;
+    int cpu_idle = 0; // Process* running = NULL; 로 했을 때 에러가 떠서 대안으로 이 방식을 택하기로 함..
     Process running;
 
-    sort_by_arrival_time(processes, n);
-
-    for (int i = 0; i < n; i++) {
+    // [1] 도착 시간 기준 정렬 후 초기 ready 큐에 등록
+    sort_by_arrival_time(processes, num_processes);
+    for (int i = 0; i < num_processes; i++) {
         enqueue(&ready_q, processes[i]);
     }
 
     printf("=== FCFS Scheduling with I/O Simulation ===\n\n");
 
-    while (completed < n) {
-        // I/O 복귀 체크
-        int q_len = queue_size(&io_q);  // 또는 io_q.size (단, enqueue/dequeue에서 관리한다면)
-        for (int i = 0; i < q_len; i++) {
-            Process io_proc = dequeue(&io_q);
-            if (io_proc.io_complete_time <= current_time) {
-                log_io_event(current_time, io_proc.pid, "IO Done", -1, -1);
-                io_proc.io_complete_time = 0;
-                enqueue(&ready_q, io_proc);
-            } else {
-                enqueue(&io_q, io_proc); // 아직 I/O 진행 중
-            }
-        }
+    while (completed < num_processes) {
+        // [2] I/O 완료된 프로세스 ready 큐로 복귀 처리
+        process_io_completion(&io_q, &ready_q, current_time);
 
-        if (!running_flag && !is_empty(&ready_q)) {
+        // [3] CPU 할당 (idle 상태 && ready 큐에 대기 중인 프로세스 존재 시)
+        if (!cpu_idle && !is_empty(&ready_q)) {
             running = dequeue(&ready_q);
-            running_flag = 1;
+            cpu_idle = 1;
             printf("DEBUG: [DISPATCH] pid=%d assigned to CPU\n", running.pid);
             if (running.executed_time == 0)
                 running.start_time = current_time;
         }
 
-        // CPU 할당
-        if (running_flag) {
+        // [4] 실행 중인 프로세스 동작
+        if (cpu_idle) {
             log_gantt_entry(running.pid, current_time, current_time + 1);
             running.executed_time++;
-        
-            // I/O 발생 조건 확인
-            int io_triggered = 0;
-            for (int i = 0; i < NUM_IO_EVENTS; i++) {
-                if (io_events[i].pid == running.pid && running.executed_time == io_events[i].trigger_time && running.io_complete_time == 0) {
-                    running.io_complete_time = current_time + io_events[i].duration;
-                    printf("DEBUG: [I/O START] pid=%d at time=%d, duration=%d\n",
-                        running.pid, current_time, io_events[i].duration);
-                    log_io_event(current_time, running.pid, "IO Start", io_events[i].trigger_time, io_events[i].duration);
-                    enqueue(&io_q, running);
-                    running_flag = 0;
-                    io_triggered = 1;
-                    break;
-                }
+
+            // [4-1] I/O 요청 발생 여부 확인 → 요청 시 io_q로 이동
+            if (check_and_start_io(&running, current_time, &io_q, io_events, num_io_events)) {
+                cpu_idle = 0;  // CPU 비움
             }
-        
-            // 종료 조건은 I/O 발생 안 했을 때만 체크
-            if (!io_triggered && running.executed_time >= running.burst_time) {
+            // [4-2] 완료 조건 확인 (I/O가 발생하지 않았고, Burst 완료 시)
+            else if (running.executed_time >= running.burst_time) {
                 running.end_time = current_time + 1;
                 running.turnaround_time = running.end_time - running.arrival_time;
                 completed++;
-                running_flag = 0;
+                cpu_idle = 0;
                 printf("DEBUG: [COMPLETE] pid=%d at time=%d\n", running.pid, current_time);
             }
         }
-        
 
+        // [5] 시간 증가 및 상태 출력
         current_time++;
         printf("DEBUG: time=%d, completed=%d, ready=%d, running_flag=%d\n",
-            current_time, completed, !is_empty(&ready_q), running_flag);
-     
+            current_time, completed, !is_empty(&ready_q), cpu_idle);
     }
 
-    calculate_times(processes, n);
+    // [6] 최종 대기/반환 시간 계산
+    calculate_times(processes, num_processes);
 }
 
+void run_round_robin_with_io(Process processes[], int num_processes, IOEvent io_events[], int num_io_events) {
+    Queue ready_q, io_q;
+    init_queue(&ready_q);
+    init_queue(&io_q);
 
+    sort_by_arrival_time(processes, num_processes);
 
+    int remaining_burst[num_processes];
+    for (int i = 0; i < num_processes; i++)
+        remaining_burst[i] = processes[i].burst_time;
 
+    int current_time = 0;
+    int completed = 0;
+    int next_arrival_idx = 0;
+    const int TIME_QUANTUM = 2;
+
+    // 초기 도착 프로세스 삽입
+    while (next_arrival_idx < num_processes && processes[next_arrival_idx].arrival_time <= current_time)
+        enqueue(&ready_q, processes[next_arrival_idx++]);
+
+    while (completed < num_processes) {
+        // 1. 매 tick마다 I/O 복귀 처리
+        process_io_completion(&io_q, &ready_q, current_time);
+
+        // 2. 실행 가능한 프로세스가 없으면 시간 진행
+        if (is_empty(&ready_q)) {
+            current_time++;
+            continue;
+        }
+
+        // 3. ready 큐에서 프로세스 하나 꺼내기
+        Process p = dequeue(&ready_q);
+        int idx = p.pid - 1;  // 원본 배열 접근을 위한 인덱스
+
+        // 4. 타임퀀텀만큼 실행 (단, burst보다 클 수 없음)
+        int exec_time = (remaining_burst[idx] > TIME_QUANTUM) ? TIME_QUANTUM : remaining_burst[idx];
+
+        for (int t = 0; t < exec_time; t++) {
+            log_gantt_entry(processes[idx].pid, current_time, current_time + 1);
+
+            processes[idx].executed_time++;
+            remaining_burst[idx]--;
+            current_time++;
+
+            // 5. I/O 발생 시 즉시 I/O 큐로 이동
+            if (check_and_start_io(&processes[idx], current_time - 1, &io_q, io_events, num_io_events)) {
+                goto RR_CONTINUE;
+            }
+
+            // 6. 프로세스 종료 시 처리
+            if (remaining_burst[idx] == 0) {
+                processes[idx].end_time = current_time;
+                processes[idx].turnaround_time = current_time - processes[idx].arrival_time;
+                completed++;
+                goto RR_CONTINUE;
+            }
+        }
+
+        // 7. 아직 종료되지 않은 프로세스는 다시 ready 큐로
+        enqueue(&ready_q, processes[idx]);
+
+        RR_CONTINUE:
+        // 8. 새로운 도착 프로세스 반영
+        while (next_arrival_idx < num_processes && processes[next_arrival_idx].arrival_time <= current_time)
+            enqueue(&ready_q, processes[next_arrival_idx++]);
+    }
+}
 
 
 // void run_fcfs(Process processes[], int n) {
