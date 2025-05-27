@@ -87,22 +87,25 @@ void print_gantt_chart(Process processes[], int n) {
         int j = i + 1;
         while (j < gantt_log_index && gantt_log[j].pid == gantt_log[i].pid)
             j++;
-
-        printf("  %s  |", processes[gantt_log[i].pid - 1].name);
+            
+        int burst = gantt_log[j - 1].end_time - gantt_log[i].start_time;
+        printf(" P%d(%d) |", gantt_log[i].pid, burst);
+            
+       //printf("  %s  |", processes[gantt_log[i].pid - 1].name);
         i = j;
     }
     printf("\n");
 
     // 2. 시간 출력
     int time = gantt_log[0].start_time;
-    printf("%-6d", time);
+    printf("%-8d", time);
     for (int i = 0; i < gantt_log_index;) {
         int j = i + 1;
         while (j < gantt_log_index && gantt_log[j].pid == gantt_log[i].pid)
             j++;
 
         time = gantt_log[j - 1].end_time;
-        printf("%-7d", time);
+        printf("%-8d", time);
         i = j;
     }
     printf("\n\n");
@@ -124,18 +127,18 @@ char* get_io_events_str(int pid) {
 }
 
 void print_result_table(Process processes[], int n) {
-    printf("PID  Name     Arr  Burst  Prio  IO_Reqs        Wait  Turn\n");
+    printf("PID  Name     Arr   Burst  Prio   Wait   Turn   IO_Reqs        \n");
 
     for (int i = 0; i < n; i++) {
-        printf("%-4d %-8s %-5d %-6d %-6d %-14s %-6d %-6d\n",
+        printf("%-4d %-8s %-5d %-6d %-6d %-6d %-6d %-14s\n",
             processes[i].pid,
             processes[i].name,
             processes[i].arrival_time,
             processes[i].burst_time,
             processes[i].priority,
-            get_io_events_str(processes[i].pid),
             processes[i].waiting_time,
-            processes[i].turnaround_time);
+            processes[i].turnaround_time,
+            get_io_events_str(processes[i].pid));
     }
 
     float total_waiting = 0, total_turnaround = 0;

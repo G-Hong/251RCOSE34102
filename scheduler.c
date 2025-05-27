@@ -33,6 +33,7 @@ void run_fcfs_with_io(Process processes[], int n) {
             Process io_proc = dequeue(&io_q);
             if (io_proc.io_complete_time <= current_time) {
                 log_io_event(current_time, io_proc.pid, "IO Done", -1, -1);
+                io_proc.io_complete_time = 0;
                 enqueue(&ready_q, io_proc);
             } else {
                 enqueue(&io_q, io_proc); // 아직 I/O 진행 중

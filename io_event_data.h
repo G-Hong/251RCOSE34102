@@ -8,6 +8,7 @@ typedef struct {
     int pid;
     int trigger_time;
     int duration;
+    int handled;
 } IOEvent;
 
 extern IOEvent io_events[];

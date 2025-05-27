@@ -13,12 +13,13 @@ void handle_io_request(Process **running, int current_time, Queue *io_q) {
     for (int i = 0; i < NUM_IO_EVENTS; i++) {
         IOEvent e = io_events[i];
 
-        if (e.pid == (*running)->pid && (*running)->executed_time == e.trigger_time) {
+        if (e.pid == (*running)->pid && (*running)->executed_time == e.trigger_time && !e.handled) {
             (*running)->io_complete_time = current_time + e.duration;
             log_io_event(current_time, (*running)->pid, "IO Start", e.trigger_time, e.duration);
+            e.handled = 1; // 중복 방지 플래그
             enqueue(io_q, **running);
             *running = NULL;  // CPU 비움
-            break;
+            return; // 이미 CPU 떠났으니 더는 처리할 이유 없음
         }
     }
 }

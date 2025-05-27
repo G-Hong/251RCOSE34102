@@ -2,10 +2,10 @@
 #include "io_event_data.h"
 
 IOEvent io_events[] = {
-    {1, 2, 3},
-    {1, 2, 1},
-    {4, 3, 2},
-    {6, 4, 3}
+    {3, 2, 2, 0},
+    {4, 1, 2, 0},
+    {4, 4, 1, 0},
+    {6, 3, 2, 0}
 };
 
 const int NUM_IO_EVENTS = sizeof(io_events) / sizeof(IOEvent);
