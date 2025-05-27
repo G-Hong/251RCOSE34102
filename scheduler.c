@@ -199,6 +199,128 @@ void run_sjf_preemptive_with_io(Process processes[], int n, IOEvent *io_events, 
     free_queue(&io_q);
 }
 
+void run_priority_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {
+    print_title("Priority (Non-preemptive) with I/O");
+
+    Queue ready_q, io_q;
+    init_queue(&ready_q);
+    init_queue(&io_q);
+
+    int current_time = 0;
+    int completed = 0;
+    int arrived[n];
+    for (int i = 0; i < n; i++) {
+        arrived[i] = 0;
+        processes[i].executed_time = 0;
+    }
+
+    check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+
+    while (completed < n) {
+        process_io_events(NULL, current_time, &io_q, &ready_q, io_events, num_io_events);
+
+        if (is_empty(&ready_q)) {
+            current_time++;
+            check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+            continue;
+        }
+
+        // 우선순위 가장 높은 프로세스 선택
+        int size = queue_size(&ready_q);
+        int idx = -1;
+        int highest_priority = 1e9;
+
+        for (int i = 0; i < size; i++) {
+            Process p = dequeue(&ready_q);
+            int iidx = p.pid - 1;
+
+            if (processes[iidx].priority < highest_priority) {
+                highest_priority = processes[iidx].priority;
+                idx = iidx;
+            }
+
+            enqueue(&ready_q, p);
+        }
+
+        // 선택된 프로세스 전체 burst 실행 중 I/O 발생 시 중단
+        execute_preemptive_step_with_io(
+            processes, idx, processes[idx].burst_time,
+            NULL, &current_time,
+            NULL, &io_q, &completed,
+            io_events, num_io_events
+        );
+
+        check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+    }
+
+    free_queue(&ready_q);
+    free_queue(&io_q);
+}
+
+
+void run_priority_preemptive_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {
+    print_title("Priority Preemptive with I/O");
+
+    int current_time = 0;
+    int completed = 0;
+
+    int remaining_burst[n];
+    int arrived[n];
+    for (int i = 0; i < n; i++) {
+        remaining_burst[i] = processes[i].burst_time;
+        arrived[i] = 0;
+        processes[i].executed_time = 0;
+    }
+
+    Queue ready_q, io_q;
+    init_queue(&ready_q);
+    init_queue(&io_q);
+
+    check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+
+    while (completed < n) {
+        process_io_events(NULL, current_time, &io_q, &ready_q, io_events, num_io_events);
+
+        if (is_empty(&ready_q)) {
+            current_time++;
+            check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+            continue;
+        }
+
+        // 현재 ready_q에서 가장 높은 priority를 가진 프로세스 선택
+        int size = queue_size(&ready_q);
+        int idx = -1;
+        int highest_priority = 1e9;
+
+        for (int i = 0; i < size; i++) {
+            Process p = dequeue(&ready_q);
+            int iidx = p.pid - 1;
+
+            if (remaining_burst[iidx] > 0 && processes[iidx].priority < highest_priority) {
+                highest_priority = processes[iidx].priority;
+                idx = iidx;
+            }
+
+            enqueue(&ready_q, p);
+        }
+
+        if (idx != -1) {
+            execute_preemptive_step_with_io(
+                processes, idx, 1,
+                remaining_burst, &current_time,
+                &ready_q, &io_q, &completed,
+                io_events, num_io_events
+            );
+        }
+
+        check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+    }
+
+    free_queue(&ready_q);
+    free_queue(&io_q);
+}
+
+
 
 
 // void run_fcfs(Process processes[], int n) {

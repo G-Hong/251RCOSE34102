@@ -9,7 +9,7 @@
 
 int main(){
     reset_gantt_log();
-    run_sjf_preemptive_with_io(scenario_processes, NUM_PROCESSES, scenario_io_events, NUM_IO_EVENTS);
+    run_priority_with_io(scenario_processes, NUM_PROCESSES, scenario_io_events, NUM_IO_EVENTS);
     print_gantt_chart(scenario_processes, NUM_PROCESSES);
     print_result_table(scenario_processes, NUM_PROCESSES);
     print_io_log();
