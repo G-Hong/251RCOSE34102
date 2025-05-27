@@ -4,17 +4,20 @@
 
 typedef struct {
     int pid;
-    char name[16];
+    char name[32];
     int arrival_time;
     int burst_time;
     int priority;
+    int remaining_time;
+
     int waiting_time;
     int turnaround_time;
+    
+    int executed_time;      // [추가됨] 누적 실행 시간 (I/O 요청 트리거 판단용)
+    int io_complete_time;   // [추가됨] I/O 완료 예상 시간 (복귀 판단용)
 
-    // I/O 처리용
-    int executed_time;       // 지금까지 CPU에서 실행된 시간
-    int io_remaining_time;   // I/O 잔여시간
-    int is_in_io;            // I/O 중인지 표시 (1이면 I/O 실행중)    
+    int start_time;
+    int end_time;
 } Process;
 
 

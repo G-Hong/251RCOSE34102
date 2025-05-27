@@ -1,5 +1,8 @@
 #include <stdio.h>
+#include <string.h>
 #include "scheduler_utils.h"
+#include "io_log.h"
+#include "io_event_data.h"
 
 void sort_by_arrival_time(Process processes[], int n) {
     for (int i = 0; i < n - 1; i++) {
@@ -105,38 +108,32 @@ void print_gantt_chart(Process processes[], int n) {
     printf("\n\n");
 }
 
-#include "io_event.h"  // io_events[]와 NUM_IO_EVENTS 사용을 위해 필요
+char* get_io_events_str(int pid) {
+    static char buffer[128];
+    buffer[0] = '\0';
 
-char* int_to_str(int value) {
-    static char buffer[16];
-    sprintf(buffer, "%d", value);
-    return buffer;
+    for (int j = 0; j < io_log_index; j++) {
+        if (io_log[j].pid == pid && strcmp(io_log[j].action, "IO Start") == 0) {
+            char entry[32];
+            sprintf(entry, "(%d,%d)", io_log[j].trigger_time, io_log[j].duration);
+            strcat(buffer, entry);
+        }
+    }
+
+    return (strlen(buffer) == 0) ? "-" : buffer;
 }
 
 void print_result_table(Process processes[], int n) {
-    printf("PID  Name     Arr  Burst  Prio  IO_Req IO_Dur Wait  Turn\n");
+    printf("PID  Name     Arr  Burst  Prio  IO_Reqs        Wait  Turn\n");
 
     for (int i = 0; i < n; i++) {
-        int io_req = -1; // 기본값: 없음
-        int io_dur = -1;
-
-        // 외부 이벤트 배열에서 현재 PID에 대한 IO 이벤트 찾기 (최초 1개만 출력)
-        for (int j = 0; j < NUM_IO_EVENTS; j++) {
-            if (io_events[j].pid == processes[i].pid) {
-                io_req = io_events[j].trigger_time;
-                io_dur = io_events[j].burst_time;
-                break; // 첫 번째 이벤트만 사용
-            }
-        }
-
-        printf("%-4d %-8s %-5d %-6d %-6d %-7s %-7s %-6d %-6d\n",
+        printf("%-4d %-8s %-5d %-6d %-6d %-14s %-6d %-6d\n",
             processes[i].pid,
             processes[i].name,
             processes[i].arrival_time,
             processes[i].burst_time,
             processes[i].priority,
-            (io_req == -1 ? "-" : int_to_str(io_req)),   // 없으면 "-"
-            (io_dur == -1 ? "-" : int_to_str(io_dur)),
+            get_io_events_str(processes[i].pid),
             processes[i].waiting_time,
             processes[i].turnaround_time);
     }
@@ -150,6 +147,11 @@ void print_result_table(Process processes[], int n) {
     printf("\nAverage Waiting Time: %.2f\n", total_waiting / n);
     printf("Average Turnaround Time: %.2f\n", total_turnaround / n);
 }
+
+
+
+
+
 
 
 // void print_result_table(Process processes[], int n) {

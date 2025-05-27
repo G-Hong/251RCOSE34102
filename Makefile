@@ -2,7 +2,8 @@ CC = gcc
 CFLAGS = -Wall -g
 
 # 소스 파일 목록
-SRCS = main.c scheduler.c scheduler_utils.c scenario.c queue.c io.c io_event.c
+SRCS = main.c scheduler.c scheduler_utils.c scenario.c queue.c io_handler.c io_event.c io_log.c
+
 OBJS = $(SRCS:.c=.o)
 
 TARGET = scheduler
