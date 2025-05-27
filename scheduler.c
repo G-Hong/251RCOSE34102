@@ -1,5 +1,9 @@
 //스케쥴링 알고리즘 구현 및 time 연산
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h> 
+
+
 #include "process.h"
 #include "scheduler.h"
 #include "queue.h"
@@ -143,10 +147,10 @@ void run_sjf_preemptive_with_io(Process processes[], int n, IOEvent *io_events, 
     int completed = 0;
 
     int remaining_burst[n];
-    int arrived[n];
+    bool arrived[n];
     for (int i = 0; i < n; i++) {
         remaining_burst[i] = processes[i].burst_time;
-        arrived[i] = 0;
+        arrived[i] = false;
         processes[i].executed_time = 0;
     }
 
@@ -154,49 +158,71 @@ void run_sjf_preemptive_with_io(Process processes[], int n, IOEvent *io_events, 
     init_queue(&ready_q);
     init_queue(&io_q);
 
-    // 초기 도착 프로세스 삽입
-    check_new_arrivals(processes, n, current_time, arrived, &ready_q);
-
     while (completed < n) {
-        // I/O 완료 확인
-        process_io_events(NULL, current_time, &io_q, &ready_q, io_events, num_io_events);
-
-        if (is_empty(&ready_q)) {
-            current_time++;
-            check_new_arrivals(processes, n, current_time, arrived, &ready_q);
-            continue;
+        // [1] 도착한 프로세스를 ready_q에 삽입
+        for (int i = 0; i < n; i++) {
+            if (!arrived[i] && processes[i].arrival_time <= current_time) {
+                enqueue(&ready_q, processes[i]);
+                arrived[i] = true;
+                printf("DEBUG: New arrival -> PID=%d at time=%d\n", processes[i].pid, current_time);
+            }
         }
 
-        // Ready Queue에서 남은 burst time이 가장 짧은 프로세스 선택
-        int min_idx = -1;
-        int min_remaining = 1e9;
+        // [2] I/O 완료된 프로세스 복귀
+        process_io_completion(&io_q, &ready_q, current_time);
+
+        // [3] ready_q에서 남은 burst가 가장 짧은 프로세스 선택
         int size = queue_size(&ready_q);
+        int min_idx = -1;
+        int min_remain = 1e9;
+
         for (int i = 0; i < size; i++) {
             Process p = dequeue(&ready_q);
             int idx = p.pid - 1;
 
-            if (remaining_burst[idx] < min_remaining) {
-                min_remaining = remaining_burst[idx];
+            if (remaining_burst[idx] < min_remain && remaining_burst[idx] > 0) {
+                min_remain = remaining_burst[idx];
                 min_idx = idx;
             }
 
-            enqueue(&ready_q, p); // 다시 넣기
+            // 큐 유지
+            enqueue(&ready_q, p);
         }
 
         if (min_idx != -1) {
-            execute_preemptive_step_with_io(
-                processes, min_idx, 1,
-                remaining_burst, &current_time,
-                &ready_q, &io_q,
-                &completed, io_events, num_io_events
-            );
+            Process *p = &processes[min_idx];
+
+            // Gantt 기록
+            log_gantt_entry(p->pid, current_time, current_time + 1);
+
+            // 최초 실행 시 시작 시간 기록
+            if (p->executed_time == 0)
+                p->start_time = current_time;
+
+            p->executed_time++;
+            remaining_burst[min_idx]--;
+
+            // I/O 발생 시
+            if (check_and_start_io(p, current_time, &io_q, io_events, num_io_events)) {
+                current_time++;
+                continue;
+            }
+
+            // 종료 시
+            if (remaining_burst[min_idx] == 0) {
+                p->end_time = current_time + 1;
+                p->turnaround_time = p->end_time - p->arrival_time;
+                completed++;
+            } else {
+                // 아직 안끝났으면 다시 ready_q에 삽입
+                enqueue(&ready_q, *p);
+            }
         }
 
-        check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+        current_time++;
     }
 
-    free_queue(&ready_q);
-    free_queue(&io_q);
+    calculate_times(processes, n);
 }
 
 void run_priority_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {
@@ -214,97 +240,136 @@ void run_priority_with_io(Process processes[], int n, IOEvent *io_events, int nu
         processes[i].executed_time = 0;
     }
 
-    check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+    Process running;
+    int cpu_idle = 0;
+
+    sort_by_arrival_time(processes, n);  // 초기 도착 기준 정렬
 
     while (completed < n) {
-        process_io_events(NULL, current_time, &io_q, &ready_q, io_events, num_io_events);
-
-        if (is_empty(&ready_q)) {
-            current_time++;
-            check_new_arrivals(processes, n, current_time, arrived, &ready_q);
-            continue;
+        // 도착한 프로세스 큐에 넣기
+        for (int i = 0; i < n; i++) {
+            if (!arrived[i] && processes[i].arrival_time <= current_time) {
+                enqueue(&ready_q, processes[i]);
+                arrived[i] = 1;
+                printf("DEBUG: check_new_arrivals - PID=%d name=%s\n", processes[i].pid, processes[i].name);
+            }
         }
 
-        // 우선순위 가장 높은 프로세스 선택
-        int size = queue_size(&ready_q);
-        int idx = -1;
-        int highest_priority = 1e9;
+        // I/O 완료된 프로세스 복귀
+        process_io_completion(&io_q, &ready_q, current_time);
 
-        for (int i = 0; i < size; i++) {
-            Process p = dequeue(&ready_q);
-            int iidx = p.pid - 1;
+        // CPU가 비어있고 ready 큐에 프로세스가 있으면
+        if (!cpu_idle && !is_empty(&ready_q)) {
+            // 가장 높은 priority의 프로세스 선택
+            int size = queue_size(&ready_q);
+            int best_priority = 1e9;
+            Process best_proc;
 
-            if (processes[iidx].priority < highest_priority) {
-                highest_priority = processes[iidx].priority;
-                idx = iidx;
+            for (int i = 0; i < size; i++) {
+                Process p = dequeue(&ready_q);
+                if (p.priority < best_priority) {
+                    best_priority = p.priority;
+                    best_proc = p;
+                }
+                enqueue(&ready_q, p);  // 복원
             }
 
-            enqueue(&ready_q, p);
+            // 다시 한 번 dequeue해서 가장 높은 priority 꺼냄
+            for (int i = 0; i < size; i++) {
+                Process p = dequeue(&ready_q);
+                if (p.pid == best_proc.pid) {
+                    running = p;
+                } else {
+                    enqueue(&ready_q, p);
+                }
+            }
+
+            cpu_idle = 1;
+            if (running.executed_time == 0)
+                running.start_time = current_time;
+
+            printf("DEBUG: [DISPATCH] pid=%d assigned to CPU\n", running.pid);
         }
 
-        // 선택된 프로세스 전체 burst 실행 중 I/O 발생 시 중단
-        execute_preemptive_step_with_io(
-            processes, idx, processes[idx].burst_time,
-            NULL, &current_time,
-            NULL, &io_q, &completed,
-            io_events, num_io_events
-        );
+        // 실행 중이면 1 tick 수행
+        if (cpu_idle) {
+            log_gantt_entry(running.pid, current_time, current_time + 1);
+            running.executed_time++;
 
-        check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+            // I/O 발생
+            if (check_and_start_io(&running, current_time, &io_q, io_events, num_io_events)) {
+                cpu_idle = 0;
+            }
+            // 완료
+            else if (running.executed_time >= running.burst_time) {
+                running.end_time = current_time + 1;
+                running.turnaround_time = running.end_time - running.arrival_time;
+                completed++;
+                cpu_idle = 0;
+                printf("DEBUG: [COMPLETE] pid=%d at time=%d\n", running.pid, current_time);
+            }
+        }
+
+        current_time++;
     }
 
-    free_queue(&ready_q);
-    free_queue(&io_q);
+    calculate_times(processes, n);
 }
 
 
 void run_priority_preemptive_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {
     print_title("Priority Preemptive with I/O");
 
-    int current_time = 0;
-    int completed = 0;
-
-    int remaining_burst[n];
-    int arrived[n];
-    for (int i = 0; i < n; i++) {
-        remaining_burst[i] = processes[i].burst_time;
-        arrived[i] = 0;
-        processes[i].executed_time = 0;
-    }
-
     Queue ready_q, io_q;
     init_queue(&ready_q);
     init_queue(&io_q);
 
-    check_new_arrivals(processes, n, current_time, arrived, &ready_q);
+    int current_time = 0;
+    int completed = 0;
+    int remaining_burst[n];
+    bool arrived[n];
+
+    for (int i = 0; i < n; i++) {
+        remaining_burst[i] = processes[i].burst_time;
+        processes[i].executed_time = 0;
+        arrived[i] = false;
+    }
 
     while (completed < n) {
-        process_io_events(NULL, current_time, &io_q, &ready_q, io_events, num_io_events);
+        // 1. 도착 + I/O 복귀 처리
+        for (int i = 0; i < n; i++) {
+            if (!arrived[i] && processes[i].arrival_time <= current_time) {
+                enqueue(&ready_q, processes[i]);
+                arrived[i] = true;
+                printf("DEBUG: New arrival -> PID=%d at time=%d\n", processes[i].pid, current_time);
+            }
+        }
+        process_io_completion(&io_q, &ready_q, current_time);
 
         if (is_empty(&ready_q)) {
             current_time++;
-            check_new_arrivals(processes, n, current_time, arrived, &ready_q);
             continue;
         }
 
-        // 현재 ready_q에서 가장 높은 priority를 가진 프로세스 선택
+        // 2. 현재 ready_q에서 우선순위 가장 높은 프로세스 선택
         int size = queue_size(&ready_q);
         int idx = -1;
-        int highest_priority = 1e9;
+        int best_priority = 1e9;
 
         for (int i = 0; i < size; i++) {
             Process p = dequeue(&ready_q);
-            int iidx = p.pid - 1;
+            int pi = p.pid - 1;
 
-            if (remaining_burst[iidx] > 0 && processes[iidx].priority < highest_priority) {
-                highest_priority = processes[iidx].priority;
-                idx = iidx;
+            if (remaining_burst[pi] > 0 && processes[pi].priority < best_priority) {
+                best_priority = processes[pi].priority;
+                idx = pi;
             }
 
-            enqueue(&ready_q, p);
+            enqueue(&ready_q, p);  // 다시 큐로 복원
         }
 
         if (idx != -1) {
+            // 1 tick 실행 (선점형)
             execute_preemptive_step_with_io(
                 processes, idx, 1,
                 remaining_burst, &current_time,
@@ -312,13 +377,13 @@ void run_priority_preemptive_with_io(Process processes[], int n, IOEvent *io_eve
                 io_events, num_io_events
             );
         }
-
-        check_new_arrivals(processes, n, current_time, arrived, &ready_q);
     }
 
     free_queue(&ready_q);
     free_queue(&io_q);
 }
+
+
 
 
 

@@ -20,11 +20,18 @@ void sort_by_arrival_time(Process processes[], int num_processes) {
 void check_new_arrivals(Process processes[], int num_processes, int current_time, int arrived[], Queue* q) {
     for (int i = 0; i < num_processes; i++) {
         if (processes[i].arrival_time <= current_time && !arrived[i]) {
+            printf("DEBUG: check_new_arrivals - PID=%d name=%s\n",
+                processes[i].pid, processes[i].name);
             enqueue(q, processes[i]);
+            printf("체크2");
             arrived[i] = 1;
+            printf("체크3");
         }
+        printf("체크4");
     }
+    printf("체크5");
 }
+
 
 void execute_preemptive_step_with_io(
     Process processes[], int idx, int exec_time,
@@ -82,7 +89,7 @@ void execute_preemptive_step(
 }
 
 
-void calculate_times(Process processes[], int num_processes) {
+void calculate_times(Process processes[], int num_processes) {  // 비선점형 전용 시간계산 함수
     int current_time = 0;
     for (int i = 0; i < num_processes; i++) {
         if (current_time < processes[i].arrival_time)
