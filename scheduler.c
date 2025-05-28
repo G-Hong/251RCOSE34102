@@ -68,7 +68,7 @@ void run_round_robin_with_io(Process processes[], int n, IOEvent *io_events, int
     Queue ready_q, io_q;
     init_queue(&ready_q);
     init_queue(&io_q);
-
+    // [1] 프로세스를 arrival_time 기준으로 정렬
     sort_by_arrival_time(processes, n);
 
     int remaining_burst[n], current_time = 0, completed = 0;
@@ -80,9 +80,16 @@ void run_round_robin_with_io(Process processes[], int n, IOEvent *io_events, int
     int next_arrival_idx = 0;
     const int TIME_QUANTUM = 2;
 
-    while (next_arrival_idx < n && processes[next_arrival_idx].arrival_time <= current_time)
-        enqueue(&ready_q, processes[next_arrival_idx++]);
+    // [2] 초기 프로세스가 아무도 안 왔을 경우 current_time을 조정
+    if (current_time < processes[0].arrival_time)
+    current_time = processes[0].arrival_time;
 
+    // [3] 초기 프로세스 도착 처리
+    while (next_arrival_idx < n && processes[next_arrival_idx].arrival_time <= current_time){
+        // printf("ENQUEUE RR: pid=%d arrival=%d priority=%d\n", processes[next_arrival_idx].pid, processes[next_arrival_idx].arrival_time, processes[next_arrival_idx].priority);
+        enqueue(&ready_q, processes[next_arrival_idx++]);
+    }
+    // [4] RR
     while (completed < n) {
         process_io_completion(&io_q, &ready_q, current_time);
 
@@ -122,7 +129,7 @@ void run_round_robin_with_io(Process processes[], int n, IOEvent *io_events, int
     calculate_times(processes, n);
 }
 
-void run_sjf_preemptive_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {
+void run_sjf_preemptive_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {    // 똑같이 짧은 job이면 queue내부에서 앞에 있는 순서가 우선 -> 추후 starvation 방지 추가 예정
     print_title("SJF Preemptive with I/O");
 
     Queue ready_q, io_q;
@@ -137,6 +144,8 @@ void run_sjf_preemptive_with_io(Process processes[], int n, IOEvent *io_events, 
         processes[i].executed_time = 0;
         arrived[i] = false;
     }
+    if (current_time < processes[0].arrival_time)
+    current_time = processes[0].arrival_time;
 
     while (completed < n) {
         check_new_arrivals(processes, n, current_time, arrived, &ready_q);
@@ -184,7 +193,7 @@ void run_sjf_preemptive_with_io(Process processes[], int n, IOEvent *io_events, 
     calculate_times(processes, n);
 }
 
-void run_priority_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {
+void run_priority_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {  // 같은 priority면 먼저 도착한 순서(Queue 내부 앞쪽)
     print_title("Priority (Non-preemptive) with I/O");
 
     Queue ready_q, io_q;
@@ -200,6 +209,9 @@ void run_priority_with_io(Process processes[], int n, IOEvent *io_events, int nu
 
     Process running;
     int cpu_idle = 0;
+
+    if (current_time < processes[0].arrival_time)
+    current_time = processes[0].arrival_time;
 
     while (completed < n) {
         check_new_arrivals(processes, n, current_time, arrived, &ready_q);
@@ -252,7 +264,7 @@ void run_priority_with_io(Process processes[], int n, IOEvent *io_events, int nu
     calculate_times(processes, n);
 }
 
-void run_priority_preemptive_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {
+void run_priority_preemptive_with_io(Process processes[], int n, IOEvent *io_events, int num_io_events) {   // 같은 priority인 프로세스가 여럿일 경우, queue에서 먼저 꺼낸 게 아니라 나중에 나오는 프로세스로 덮어씌워질 가능성 있음 -> FCFS 보장 안됨 -> 개선예정
     print_title("Priority Preemptive with I/O");
 
     Queue ready_q, io_q;
@@ -267,6 +279,9 @@ void run_priority_preemptive_with_io(Process processes[], int n, IOEvent *io_eve
         processes[i].executed_time = 0;
         arrived[i] = false;
     }
+    if (current_time < processes[0].arrival_time)
+    current_time = processes[0].arrival_time;
+
 
     while (completed < n) {
         check_new_arrivals(processes, n, current_time, arrived, &ready_q);

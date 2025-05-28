@@ -34,7 +34,7 @@ void print_io_log() {
     printf("Time\tPID\tAction\t\tTrigger\tDuration\n");
     for (int i = 0; i < io_log_index; i++) {
         printf("%d\t%d\t%-10s\t",
-            io_log[i].time,
+            io_log[i].time+1,
             io_log[i].pid,
             io_log[i].action);
 
