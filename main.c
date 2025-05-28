@@ -12,8 +12,8 @@ void total_algorithm_with_io(Process processes[], int num_processes, IOEvent io_
 int main() {
 
 
-    // generate_full_scenario(random_scenario_processes, RANDOM_NUM_PROCESSES, random_scenario_io_events, &RANDOM_NUM_IO_EVENTS);
-    // total_algorithm_with_io(random_scenario_processes, RANDOM_NUM_PROCESSES, random_scenario_io_events, RANDOM_NUM_IO_EVENTS);
+    generate_full_scenario(random_scenario_processes, RANDOM_NUM_PROCESSES, random_scenario_io_events, &RANDOM_NUM_IO_EVENTS);
+    total_algorithm_with_io(random_scenario_processes, RANDOM_NUM_PROCESSES, random_scenario_io_events, RANDOM_NUM_IO_EVENTS);
     total_algorithm_with_io(scenario_processes, NUM_PROCESSES, scenario_io_events, NUM_IO_EVENTS);
     // clear_io_reqs(scenario_processes, NUM_PROCESSES);
     // reset_io_log();
