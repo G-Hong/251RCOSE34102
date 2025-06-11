@@ -16,7 +16,7 @@ int is_empty(Queue* q) {
 
 
 void enqueue(Queue* q, Process p) {
-    // printf("DEBUG: enqueue() - PID=%d\n", p.pid); // 확인용
+    //printf("DEBUG: enqueue() - PID=%d\n", p.pid); // 확인용
     Node* new_node = (Node*)malloc(sizeof(Node));
     new_node->data = p;
     new_node->next = NULL;

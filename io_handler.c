@@ -43,7 +43,7 @@ void process_io_completion(Queue *io_q, Queue *ready_q, int current_time) {
     int len = queue_size(io_q);
     for (int i = 0; i < len; i++) {
         Process p = dequeue(io_q);
-        if (p.io_complete_time <= current_time) {
+        if (p.io_complete_time == current_time) {
             log_io_event(current_time, p.pid, "IO Done", -1, -1);
             p.io_complete_time = 0;
             enqueue(ready_q, p);

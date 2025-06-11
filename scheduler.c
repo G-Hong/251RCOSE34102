@@ -94,6 +94,7 @@ void run_round_robin_with_io(Process processes[], int n, IOEvent *io_events, int
         process_io_completion(&io_q, &ready_q, current_time);
 
         if (is_empty(&ready_q)) {
+            process_io_completion(&io_q, &ready_q, current_time); // ready_q가 비어 있어도, process_io_completion()체크
             current_time++;
             continue;
         }
@@ -107,6 +108,8 @@ void run_round_robin_with_io(Process processes[], int n, IOEvent *io_events, int
             processes[idx].executed_time++;
             remaining_burst[idx]--;
             current_time++;
+
+            process_io_completion(&io_q, &ready_q, current_time);
 
             if (check_and_start_io(&processes[idx], current_time - 1, &io_q, io_events, num_io_events))
                 goto RR_CONTINUE;
