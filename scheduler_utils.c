@@ -29,38 +29,53 @@ void check_new_arrivals(Process processes[], int num_processes, int current_time
     }
 }
 
-
 void execute_preemptive_step_with_io(
     Process processes[], int idx, int exec_time,
     int *remaining_burst, int *current_time,
     Queue *ready_q, Queue *io_q,
     int *completed, IOEvent *io_events, int n
 ) {
+    Process *p = &processes[idx];
+
     for (int t = 0; t < exec_time; t++) {
-        log_gantt_entry(processes[idx].pid, *current_time, *current_time + 1);
-
-        processes[idx].executed_time++;
-
-        if (check_and_start_io(&processes[idx], *current_time, io_q, io_events, n)) {
-            (*current_time)++;  // I/O 발생한 이 시간까지는 진행됨
-            return;  // CPU 반환
-        }
-
+        log_gantt_entry(p->pid, *current_time, *current_time + 1);
+        p->executed_time++;
         (*current_time)++;
         remaining_burst[idx]--;
 
+        // 실행 중 I/O 요청이 발생하면 처리하고 CPU 반납
+        if (check_and_start_io(p, *current_time - 1, io_q, io_events, n)) {
+            return;  // I/O 대기 -> CPU 반납
+        }
+
+        // 실행 완료 시 처리
         if (remaining_burst[idx] == 0) {
-            processes[idx].turnaround_time = *current_time - processes[idx].arrival_time;
+            p->turnaround_time = *current_time - p->arrival_time;
             (*completed)++;
             return;
         }
+
+        // 이 시점에서 우선순위 더 높은 프로세스가 ready 큐에 들어온 경우 preempt
+        int size = queue_size(ready_q);
+        for (int i = 0; i < size; i++) {
+            Process tmp = dequeue(ready_q);
+            if (tmp.priority < p->priority) {
+                // 더 높은 우선순위 발견 시, 현재 프로세스를 다시 ready 큐에 넣고 preempt
+                enqueue(ready_q, tmp);      // 꺼낸 애 다시 넣기
+                enqueue(ready_q, *p);       // 현재 실행중이던 애도 넣기
+                return;
+            } else {
+                enqueue(ready_q, tmp);      // 아니면 그냥 다시 넣기
+            }
+        }
     }
 
-    // 완료되지 않았다면 ready 큐에 다시 삽입
+    // 아직 완료되지 않았고 preempt도 안됐으면 다시 큐에 삽입
     if (ready_q != NULL) {
-        enqueue(ready_q, processes[idx]);
+        enqueue(ready_q, *p);
     }
 }
+
 
 
 void execute_preemptive_step(

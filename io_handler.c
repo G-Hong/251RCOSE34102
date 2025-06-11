@@ -30,7 +30,7 @@ void update_io_queue(int current_time, Queue *io_q, Queue *ready_q) {
     int size = queue_size(io_q);
     for (int i = 0; i < size; i++) {
         Process p = dequeue(io_q);
-        if (current_time >= p.io_complete_time) {
+        if (current_time == p.io_complete_time) {
             log_io_event(current_time, p.pid, "IO Done", -1, -1);
             enqueue(ready_q, p);
         } else {
@@ -52,6 +52,7 @@ void process_io_completion(Queue *io_q, Queue *ready_q, int current_time) {
         }
     }
 }
+
 
 int check_and_start_io(Process *running, int current_time, Queue *io_q, IOEvent *io_events, int n) {
     for (int i = 0; i < n; i++) {

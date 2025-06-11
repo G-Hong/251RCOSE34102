@@ -7,7 +7,7 @@
 
 
 IOEvent scenario_io_events[] = {
-    {3, 1, 4, 0},
+    {3, 1, 1, 0},
     {3, 2, 3, 0},
     {4, 4, 1, 0},
     {4, 5, 3, 0}
@@ -48,7 +48,7 @@ void generate_safe_io_events(const Process processes[], int n, IOEvent io_events
         int burst = processes[i].burst_time;
         if (burst <= 2) continue; // 너무 짧은 프로세스는 제외
 
-        int io_count = rand() % 3; // 각 프로세스당 최대 2개의 I/O
+        int io_count = rand() % 3 + 1; // 각 프로세스당 최대 3개의 I/O
         int last_io_end = -1;
 
         for (int j = 0; j < io_count; j++) {
